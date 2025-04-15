@@ -194,8 +194,6 @@ def main(**kwargs):
         )
         model.resize_token_embeddings(len(tokenizer))
 
-    print_model_size(model, train_config, rank if train_config.enable_fsdp else 0)
-
     # Convert the model to bfloat16 if fsdp and pure_bf16 is enabled
     if (
         train_config.enable_fsdp
@@ -217,7 +215,6 @@ def main(**kwargs):
             model = get_peft_model(model, peft_config)
         if wandb_run:
             wandb_run.config.update(peft_config)
-        model.print_trainable_parameters()
 
     hsdp_device_mesh_plan = None
     if (
@@ -319,16 +316,12 @@ def main(**kwargs):
         dataset_config,
         split="train",
     )
-    if not train_config.enable_fsdp or rank == 0:
-        print(f"--> Training Set Length = {len(dataset_train)}")
 
     dataset_val = get_preprocessed_dataset(
         dataset_processer,
         dataset_config,
         split="test",
     )
-    if not train_config.enable_fsdp or rank == 0:
-        print(f"--> Validation Set Length = {len(dataset_val)}")
 
     if train_config.batching_strategy == "packing":
         if is_vision:
@@ -341,7 +334,6 @@ def main(**kwargs):
     train_dl_kwargs = get_dataloader_kwargs(
         train_config, dataset_train, dataset_processer, "train"
     )
-    print("length of dataset_train", len(dataset_train))
     custom_data_collator = get_custom_data_collator(dataset_processer, dataset_config)
     if custom_data_collator:
         print("custom_data_collator is used")
@@ -353,7 +345,6 @@ def main(**kwargs):
         pin_memory=True,
         **train_dl_kwargs,
     )
-    print(f"--> Num of Training Set Batches loaded = {len(train_dataloader)}")
 
     eval_dataloader = None
     if train_config.run_validation:
@@ -377,13 +368,10 @@ def main(**kwargs):
             pin_memory=True,
             **val_dl_kwargs,
         )
-        print(f"--> Num of Validation Set Batches loaded = {len(eval_dataloader)}")
         if len(eval_dataloader) == 0:
             raise ValueError(
                 f"The eval set size is too small for dataloader to load even one batch. Please increase the size of eval set. ({len(eval_dataloader)=})"
             )
-        else:
-            print(f"--> Num of Validation Set Batches loaded = {len(eval_dataloader)}")
 
     # Initialize the optimizer and learning rate scheduler
     if fsdp_config.pure_bf16 and fsdp_config.optimizer == "anyprecision":
