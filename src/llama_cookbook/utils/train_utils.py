@@ -180,7 +180,7 @@ def train(model, train_dataloader,eval_dataloader, tokenizer, optimizer, lr_sche
                             optimizer.step()
                             optimizer.zero_grad()
                             after = time.time()
-                            print(before, after - before)
+                            print(before, after - before, flush=True)
                             before = after
                             # pbar.update(1)
                     if train_config.use_profiler or train_config.flop_counter:
